@@ -49,6 +49,7 @@ async function interact(caller, action) {
         agent.say(
           trace.payload.message
         )
+        saveTranscript(caller)
         break
       }
       case 'CALL': {
