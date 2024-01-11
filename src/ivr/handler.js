@@ -128,7 +128,7 @@ function createSession() {
 
 async function saveTranscript(username) {
   if (VOICEFLOW_PROJECT_ID) {
-    console.log('SAVE TRANSCRIPT')
+    console.log('SAVING TRANSCRIPT')
     if (!username || username == '' || username == undefined) {
       username = 'Anonymous';
     }
@@ -136,13 +136,12 @@ async function saveTranscript(username) {
       method: 'put',
       url: 'https://api.voiceflow.com/v2/transcripts',
       data: {
-        browser: 'Twilio',
-        device: 'Phone',
-        os: 'Twilio',
         sessionID: session,
-        unread: true,
         versionID: VOICEFLOW_VERSION_ID,
         projectID: VOICEFLOW_PROJECT_ID,
+        device: 'Phone',
+        os: 'Twilio',
+        browser: 'Twilio',
         user: {
           name: username,
           image: 'https://s3.amazonaws.com/com.voiceflow.studio/share/twilio-logo-png-transparent/twilio-logo-png-transparent.png',
