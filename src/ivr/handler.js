@@ -6,6 +6,8 @@ const {
   TWILIO_AUTH_TOKEN,
 } = process.env
 
+console.log(`dotenv information loaded.`);
+
 const VoiceResponse = require('twilio').twiml.VoiceResponse
 const SMS = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 const axios = require('axios')
@@ -49,7 +51,7 @@ async function interact(caller, action) {
         agent.say(
           trace.payload.message
         )
-        saveTranscript(caller)
+        console.log(`--- A call is ongoing ---`)
         break
       }
       case 'CALL': {
