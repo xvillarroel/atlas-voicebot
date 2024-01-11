@@ -158,5 +158,3 @@ async function saveTranscript(username) {
       .catch((err) => console.log(`------- ERROR: ${err}`));
   }
 }
-
-//Testing Commit
