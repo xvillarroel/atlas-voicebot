@@ -6,14 +6,32 @@ const {
   TWILIO_AUTH_TOKEN,
 } = process.env
 
-console.log(`dotenv information loaded.`);
-
 const VoiceResponse = require('twilio').twiml.VoiceResponse
 const SMS = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 const axios = require('axios')
 const VOICEFLOW_VERSION_ID = process.env.VOICEFLOW_VERSION_ID || 'development'
 const VOICEFLOW_PROJECT_ID = process.env.VOICEFLOW_PROJECT_ID || null
 let session = `${VOICEFLOW_VERSION_ID}.${createSession()}`
+
+exports.logTranscript = async (message) => {
+
+  const sheetid = "1XNbbvjnF8GCiDgls0FI0K3GfmoinOcwfcd5nlIRpgD4";
+  const lambdaURL = "https://ytzivrzj76ejwc2vdbnzwladdm0nvubi.lambda-url.us-east-1.on.aws/";
+
+  console.log('Writting Log')
+
+  axios({
+          method: 'post',
+          url: lambdaURL,
+          data: {
+                "sheetid": sheetid,
+                "message": message
+                }
+        })
+        .then (function(response) { console.log(`Logged in the following sheet: https://docs.google.com/spreadsheets/d/${sheetid}`) })
+        .catch ((err) => console.log(`------- ERROR: ${err}`));
+
+}
 
 async function interact(caller, action) {
   const twiml = new VoiceResponse()
@@ -49,22 +67,29 @@ async function interact(caller, action) {
       case 'text':
       case 'speak': {
         agent.say(
-          trace.payload.message
+          trace.payload.message 
         )
-        console.log(`--- A call is ongoing ---`)
+        await logTranscript(trace.payload.message);
+        await logTranscript(`--- A call is ongoing ---`);
         break
       }
       case 'CALL': {
         const { number } = JSON.parse(trace.payload)
         console.log('Calling', number)
+        await logTranscript(`Calling: ${number}`);
         twiml.dial(number)
         break
       }
       case 'SMS': {
         const { message } = JSON.parse(trace.payload)
         console.log('Sending SMS', message)
+        await logTranscript(`Sending SMS: ${messag}`);
+
         console.log('To', caller)
+        await logTranscript(`To: ${caller}`);
+
         console.log('From', TWILIO_PHONE_NUMBER)
+        await logTranscript(`From: ${TWILIO_PHONE_NUMBER}`);
 
         SMS.messages
           .create({ body: message, to: caller, from: TWILIO_PHONE_NUMBER })
@@ -75,10 +100,13 @@ async function interact(caller, action) {
             console.error('Error sending message:', error)
           })
         saveTranscript(caller)
+        await logTranscript(message.sid);
+        
         break
       }
       case 'end': {
         saveTranscript(caller)
+        await logTranscript(number);
         twiml.hangup()
         break
       }
@@ -160,3 +188,5 @@ async function saveTranscript(username) {
       .catch((err) => console.log(`------- ERROR: ${err}`));
   }
 }
+
+
