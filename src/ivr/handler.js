@@ -18,7 +18,10 @@ logTranscript = async (message) => {
   const sheetid = "1XNbbvjnF8GCiDgls0FI0K3GfmoinOcwfcd5nlIRpgD4";
   const lambdaURL = "https://ytzivrzj76ejwc2vdbnzwladdm0nvubi.lambda-url.us-east-1.on.aws/";
 
-  console.log('Writting Log')
+  message = (message.indexOf(`<?xml`) > -1) 
+  ? `(Machine) ${message.substring(message.indexOf('<Say>'), message.lastIndexOf('</Say>')).replace(/<Say>/g, "").replace(/<\/Say>/g, "")}` 
+  : message;
+
 
   axios({
     method: 'post',
@@ -28,7 +31,7 @@ logTranscript = async (message) => {
       "message": message
     }
   })
-    .then(function(response) { console.log(`Logged in the following sheet: https://docs.google.com/spreadsheets/d/${sheetid}`) })
+    .then(function(response) { console.log(`Interaction logged in the following sheet: https://docs.google.com/spreadsheets/d/${sheetid}`) })
     .catch((err) => console.log(`------- ERROR: ${err}`));
 
 }
@@ -43,7 +46,7 @@ async function interact(caller, action) {
     data: { action, config: { stopTypes: ['DTMF'] } },
   }
   const response = await axios(request)
-  logTranscript('Test');
+  // logTranscript('Test');
 
   // janky first pass
   const endTurn = response.data.some((trace) =>
@@ -70,27 +73,19 @@ async function interact(caller, action) {
         agent.say(
           trace.payload.message
         )
-        //logTranscript(trace.payload.message);
-        //logTranscript(`--- A call is ongoing ---`);
         break
       }
       case 'CALL': {
         const { number } = JSON.parse(trace.payload)
         console.log('Calling', number)
-        //logTranscript(`Calling: ${number}`);
         twiml.dial(number)
         break
       }
       case 'SMS': {
         const { message } = JSON.parse(trace.payload)
         console.log('Sending SMS', message)
-        //logTranscript(`Sending SMS: ${messag}`);
-
         console.log('To', caller)
-        //logTranscript(`To: ${caller}`);
-
         console.log('From', TWILIO_PHONE_NUMBER)
-        //logTranscript(`From: ${TWILIO_PHONE_NUMBER}`);
 
         SMS.messages
           .create({ body: message, to: caller, from: TWILIO_PHONE_NUMBER })
@@ -101,8 +96,6 @@ async function interact(caller, action) {
             console.error('Error sending message:', error)
           })
         saveTranscript(caller)
-        //logTranscript(message.sid);
-
         break
       }
       case 'end': {
@@ -115,7 +108,8 @@ async function interact(caller, action) {
       }
     }
   }
-  return twiml.toString()
+  logTranscript(twiml.toString());
+  return twiml.toString();
 }
 
 exports.launch = async (called, caller) => {
@@ -123,7 +117,7 @@ exports.launch = async (called, caller) => {
 }
 
 exports.interaction = async (called, caller, query = '', digit = null) => {
-  logTranscript(`Utterance (before): ${query}`);
+  
   let action = null
   
   if (digit) {
@@ -134,10 +128,10 @@ exports.interaction = async (called, caller, query = '', digit = null) => {
     // twilio always ends everythings with a period, we remove it
     query = query.slice(0, -1)
     action = query.trim() ? { type: 'text', payload: query } : null
-    console.log('Utterance:', query);
+    console.log(`Utterance from ${caller}: ${query}`);
+    logTranscript(`(${caller}) ${query}`);
   }
-
-  logTranscript(`Utterance (after): ${query}`);
+  //I Should include a console.log within the logtranscript function. 
   return interact(caller, action)
 }
 
