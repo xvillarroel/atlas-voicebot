@@ -97,8 +97,6 @@ async function interacting(called, caller, action) {
     },
   };
 
-  
-
   // EXAMPLE OF PAYLOAD: https://developer.voiceflow.com/reference/stateinteract-1
   // {
   //   "action": { "type": "launch" },
