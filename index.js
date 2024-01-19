@@ -84,11 +84,16 @@ async function interact(caller, action, called) {
   // call the Voiceflow API with the user's name & request, get back a response
   const request = {
     method: "POST",
-    url: `https://general-runtime.voiceflow.com/state/user/${encodeURI(
-      caller,
-    )}/interact`,
+    url: `https://general-runtime.voiceflow.com/state/user/${encodeURI(caller)}/interact`,
     headers: { Authorization: globals.VOICEFLOW_API_KEY, sessionid: globals.VOICEFLOW_SESSION },
-    data: { action, config: { stopTypes: ["DTMF"] } },
+    data: { 
+            caller,
+            called, 
+            action, 
+            config: { 
+              stopTypes: ["DTMF"] 
+            } 
+          },
   };
 
   const response = await axios(request);
@@ -209,12 +214,14 @@ async function saveTranscript(username) {
       },
     })
       .then(function(response) {
-        console.log("SAVED!");
+        console.log("Transcription saved, check Voiceflow's Transcript section!");
         globals.VOICEFLOW_SESSION = `${globals.VOICEFLOW_VERSION_ID}.${createSession()}`;
       })
       .catch((err) => console.log(`------- ERROR: ${err}`));
   }
 }
+
+
 
 const app = express();
 
