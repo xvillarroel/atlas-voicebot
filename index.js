@@ -257,23 +257,8 @@ router.post("/ivr/launch", async (req, res) => {  //<------------------- THIS IS
 
   };
 
-  // if (Called === "+15555555555") {
-  //   console.log(`Calling ${Called} which is DNN's number`);
-  //   globals = {
-  //     TWILIO_ACCOUNT_SID: "AC762c0c7bcd2d90fc35f4917c6445e397",
-  //     VOICEFLOW_VERSION_ID: "659f28896e8269a135ddc3cf",
-  //     VOICEFLOW_API_KEY: "VF.DM.659f3367213c970007153034.04p2pQumxTYhGAux",
-  //     TWILIO_PHONE_NUMBER: "+15555555555",
-  //     TWILIO_AUTH_TOKEN: "cdf6a57fb5919b9e805f14b27e7aab72",
-  //     VOICEFLOW_API_URL: "https://general-runtime.voiceflow.com",
-  //     VOICEFLOW_PROJECT_ID: "659f28896e8269a135ddc3ce",
-  //     VOICEFLOW_SESSION: `659f28896e8269a135ddc3cf.${createSession()}`
-  //   };
-
-  // };
-
   res.send(await launch(Called, Caller));
-}); //<------------------- THIS IS WHERE EVERYTHING BEGINS --------------------|
+}); 
 
 app.use(router);
 
