@@ -1,29 +1,6 @@
 // Configuración global
 console.log(`************************************************************************************************************************`);
 
-// object GLOBALS initiates in blank, and will be filled based on the product that is being used.
-let globals = {
-  TWILIO_ACCOUNT_SID: "",
-  VOICEFLOW_VERSION_ID: "",
-  VOICEFLOW_API_KEY: "",
-  TWILIO_PHONE_NUMBER: "",
-  TWILIO_AUTH_TOKEN: "",
-  VOICEFLOW_API_URL: "",
-  VOICEFLOW_PROJECT_ID: "",
-  VOICEFLOW_SESSION: ""
-};
-
-//Dependencies
-require("dotenv").config();
-const express = require("express");
-const logger = require("morgan");
-const bodyParser = require("body-parser");
-const twilio = require("twilio");
-const axios = require("axios");
-const VoiceResponse = require('twilio').twiml.VoiceResponse;
-
-// Functions
-
 function createSession() {
   console.log(`Function executed: createSession`);
   // Random Number Generator
@@ -46,6 +23,31 @@ function createSession() {
   console.log(`Session ID: ${session_id}`);
   return session_id;
 }
+
+// object GLOBALS initiates in blank, and will be filled based on the product that is being used.
+let globals = {
+  TWILIO_ACCOUNT_SID: "AC762c0c7bcd2d90fc35f4917c6445e397",
+  VOICEFLOW_VERSION_ID: "659f28896e8269a135ddc3cf",
+  VOICEFLOW_API_KEY: "VF.DM.659f3367213c970007153034.04p2pQumxTYhGAux",
+  TWILIO_PHONE_NUMBER: "+18556998467",
+  TWILIO_AUTH_TOKEN: "cdf6a57fb5919b9e805f14b27e7aab72",
+  VOICEFLOW_API_URL: "https://general-runtime.voiceflow.com",
+  VOICEFLOW_PROJECT_ID: "659f28896e8269a135ddc3ce",
+  VOICEFLOW_SESSION: `659f28896e8269a135ddc3cf.${createSession()}`
+};
+
+//Dependencies
+require("dotenv").config();
+const express = require("express");
+const logger = require("morgan");
+const bodyParser = require("body-parser");
+const twilio = require("twilio");
+const axios = require("axios");
+const VoiceResponse = require('twilio').twiml.VoiceResponse;
+
+// Functions
+
+
 
 logTranscript = async (message) => {
   console.log(`logTranscript = ${message}`);
@@ -77,24 +79,41 @@ logTranscript = async (message) => {
     .catch((err) => console.log(`------- ERROR: ${err}`));
 };
 
-async function interact(caller, action, called) {
+async function interact( called, caller, action ) {
   console.log(`Function executed: interact`);
   const twiml = new VoiceResponse();
+
+
 
   // call the Voiceflow API with the user's name & request, get back a response
   const request = {
     method: "POST",
     url: `https://general-runtime.voiceflow.com/state/user/${encodeURI(caller)}/interact`,
     headers: { Authorization: globals.VOICEFLOW_API_KEY, sessionid: globals.VOICEFLOW_SESSION },
-    data: { 
-            caller,
-            called, 
-            action, 
-            config: { 
-              stopTypes: ["DTMF"] 
-            } 
-          },
+    data: {
+      action,
+      config: { stopTypes: ["DTMF"] },
+      state: { variables: { calledParty: called, callingParty: caller } }
+    },
   };
+
+  // EXAMPLE OF PAYLOAD: https://developer.voiceflow.com/reference/stateinteract-1
+  // {
+  //   "action": { "type": "launch" },
+  //   "config": {
+  //     "tts": false,
+  //     "stripSSML": true,
+  //     "stopAll": true,
+  //     "excludeTypes": [
+  //       "block",
+  //       "debug",
+  //       "flow"
+  //     ]
+  //   },
+  //   state: { variables: { calledParty: called, callingParty: caller }
+  //   }
+  // }
+
 
   const response = await axios(request);
   // logTranscript('Test');
@@ -150,7 +169,7 @@ async function interact(caller, action, called) {
         break;
       }
       case "end": {
-        logTranscript(caller);
+        console.log(` *** Entering transcript ***`)
         saveTranscript(caller);
         twiml.hangup();
         break;
@@ -164,8 +183,9 @@ async function interact(caller, action, called) {
 }
 
 launch = async (called, caller) => {
-  console.log(`Function executed: launch (called: ${called}, caller: ${caller})`);
-  return interact(caller, { type: "launch" }, called);
+
+  console.log(`*** Function executed: launch (called: ${called}, caller: ${caller}) ***`);
+  return interact(called, caller, { type: "launch" });
 };
 
 interaction = async (called, caller, query = "", digit = null) => {
@@ -185,7 +205,7 @@ interaction = async (called, caller, query = "", digit = null) => {
     logTranscript(query);
   }
   //I Should include a console.log within the logtranscript function.
-  return interact(caller, action);
+  return interact( called, caller, action );
 };
 
 async function saveTranscript(username) {
@@ -214,7 +234,7 @@ async function saveTranscript(username) {
       },
     })
       .then(function(response) {
-        console.log("Transcription saved, check Voiceflow's Transcript section!");
+        console.log("<<< Transcription saved, check Voiceflow's Transcript section! >>>");
         globals.VOICEFLOW_SESSION = `${globals.VOICEFLOW_VERSION_ID}.${createSession()}`;
       })
       .catch((err) => console.log(`------- ERROR: ${err}`));
@@ -246,26 +266,15 @@ router.post("/ivr/interaction", async (req, res) => {
 router.post("/ivr/launch", async (req, res) => {  //<------------------- THIS IS WHERE EVERYTHING BEGINS --------------------|
 
   console.log(`----- Calling /ivr/launch -----`);
-  logTranscript(`Event: ${JSON.stringify(req.body)}`);
   const { Called, Caller } = req.body;
 
-  if (Called === "+18556998467") {
-    console.log(`Calling ${Called} which is Jigsaw's number`);
-    globals = {
-      TWILIO_ACCOUNT_SID: "AC762c0c7bcd2d90fc35f4917c6445e397",
-      VOICEFLOW_VERSION_ID: "659f28896e8269a135ddc3cf",
-      VOICEFLOW_API_KEY: "VF.DM.659f3367213c970007153034.04p2pQumxTYhGAux",
-      TWILIO_PHONE_NUMBER: "+18556998467",
-      TWILIO_AUTH_TOKEN: "cdf6a57fb5919b9e805f14b27e7aab72",
-      VOICEFLOW_API_URL: "https://general-runtime.voiceflow.com",
-      VOICEFLOW_PROJECT_ID: "659f28896e8269a135ddc3ce",
-      VOICEFLOW_SESSION: `659f28896e8269a135ddc3cf.${createSession()}`
-    };
+  logTranscript(`Event: ${JSON.stringify(req.body)}`);
+  logTranscript(`First time: Called is ${Called} and Caller is ${Caller}`);
 
-  };
+  /*- I could add here (and modify) the globals variables depending on the called party -*/
 
   res.send(await launch(Called, Caller));
-}); 
+});
 
 app.use(router);
 
