@@ -1,3 +1,5 @@
+BACKUP:
+
 // Configuración global
 console.log(`************************************************************************************************************************`);
 
@@ -81,8 +83,8 @@ logTranscript = async (message) => {
     .catch((err) => console.log(`------- ERROR (79): ${err}, Message: ${message}`));
 };
 
-async function interacting(called, caller, action) {
-  console.log(`Function executed: interacting`);
+async function interact(called, caller, action) {
+  console.log(`Function executed: interact`);
   const twiml = new VoiceResponse();
 
   // call the Voiceflow API with the user's name & request, get back a response
@@ -91,7 +93,7 @@ async function interacting(called, caller, action) {
     url: `https://general-runtime.voiceflow.com/state/user/${encodeURI(caller)}/interact`,
     headers: { Authorization: globals.VOICEFLOW_API_KEY, sessionid: globals.VOICEFLOW_SESSION },
     data: {
-      action, //action: { "type": "text", "payload": "How do I turn on my computer?" },
+      action,
       config: { stopTypes: ["DTMF"] },
       state: { variables: { calledParty: called, callingParty: caller } }
     },
@@ -114,10 +116,9 @@ async function interacting(called, caller, action) {
   //   }
   // }
 
-
   const response = await axios(request);
-  console.log(`>>> response = ${JSON.stringify(response)}`);
-  // logTranscript(` >>> response = ${JSON.stringify(response)}`);
+  console.log(`>>> response = ${response}`);
+  logTranscript(` >>> response = ${response}`);
 
   // janky first pass
   const endTurn = response.data.some((trace) =>
@@ -186,7 +187,7 @@ async function interacting(called, caller, action) {
 launch = async (called, caller) => {
 
   console.log(`*** Function executed: launch (called: ${called}, caller: ${caller}) ***`);
-  return interacting(called, caller, { type: "launch" });
+  return interact(called, caller, { type: "launch" });
 };
 
 interaction = async (called, caller, query = "", digit = null) => {
@@ -201,12 +202,12 @@ interaction = async (called, caller, query = "", digit = null) => {
   } else {
     // twilio always ends everythings with a period, we remove it
     query = query.slice(0, -1);
-    query = `(${caller}) ${query}`; //This line was modified so it looks like "(+14077779910) Hi, my name is Xavier"
+    query = `(${caller}) ${query}`;
     action = query.trim() ? { type: "text", payload: query } : null;
     logTranscript(query);
   }
   //I Should include a console.log within the logtranscript function.
-  return interacting(called, caller, action);
+  return interact(called, caller, action);
 };
 
 async function saveTranscript(username) {
@@ -261,6 +262,12 @@ const router = express.Router();
 
 router.use("/ivr", twilio.webhook({ validate: false }));
 
+router.post("/ivr/interaction", async (req, res) => {
+  console.log(`----- Calling /ivr/interaction -----`);
+  const { Called, Caller, SpeechResult, Digits } = req.body;
+  res.send(await interaction(Called, Caller, SpeechResult, Digits));
+});
+
 router.post("/ivr/launch", async (req, res) => {  //<------------------- THIS IS WHERE EVERYTHING BEGINS --------------------|
 
   // console.log(`----- Calling /ivr/launch -----`);
@@ -276,12 +283,6 @@ router.post("/ivr/launch", async (req, res) => {  //<------------------- THIS IS
   /*- I could add here (and modify) the globals variables depending on the called party -*/
 
   res.send(await launch(Called, Caller));
-});
-
-router.post("/ivr/interaction", async (req, res) => {
-  console.log(`----- Calling /ivr/interaction -----`);
-  const { Called, Caller, SpeechResult, Digits } = req.body;
-  res.send(await interaction(Called, Caller, SpeechResult, Digits));
 });
 
 app.use(router);
