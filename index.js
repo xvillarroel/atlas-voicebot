@@ -267,8 +267,8 @@ router.post("/ivr/launch", async (req, res) => {  //<------------------- THIS IS
   const { Called, Caller } = req.body;
 
   console.log(` ********************************************************
-                  *********************** NEW CALL ***********************
-                  ********************************************************`);
+                *********************** NEW CALL ***********************
+                ********************************************************`);
 
   logTranscript(`Event: ${JSON.stringify(req.body)}`);
   logTranscript(`First time: Called is ${Called} and Caller is ${Caller}`);
