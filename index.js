@@ -50,7 +50,7 @@ const VoiceResponse = require('twilio').twiml.VoiceResponse;
 
 
 logTranscript = async (message) => {
-  console.log(`logTranscript = ${message}`);
+  console.log(`Before change = ${message}`);
   const sheetid = "1XNbbvjnF8GCiDgls0FI0K3GfmoinOcwfcd5nlIRpgD4";
   const lambdaURL = "https://ytzivrzj76ejwc2vdbnzwladdm0nvubi.lambda-url.us-east-1.on.aws/";
 
@@ -62,6 +62,8 @@ logTranscript = async (message) => {
         .replace(/<Say\/>/g, "")
         .replace(/<\/Say>/g, "")}`
       : message;
+
+  console.log(`After change, before call = ${message}`);
 
   axios({
     method: "post",
@@ -76,14 +78,12 @@ logTranscript = async (message) => {
       console.log(
         `Logged in the following sheet: https://docs.google.com/spreadsheets/d/${sheetid}`);
     })
-    .catch((err) => console.log(`------- ERROR: ${err}`));
+    .catch((err) => console.log(`------- ERROR (79): ${err}, Message: ${message}`));
 };
 
-async function interact( called, caller, action ) {
-  console.log(`Function executed: interact`);
+async function interacting(called, caller, action) {
+  console.log(`Function executed: interacting`);
   const twiml = new VoiceResponse();
-
-
 
   // call the Voiceflow API with the user's name & request, get back a response
   const request = {
@@ -91,11 +91,13 @@ async function interact( called, caller, action ) {
     url: `https://general-runtime.voiceflow.com/state/user/${encodeURI(caller)}/interact`,
     headers: { Authorization: globals.VOICEFLOW_API_KEY, sessionid: globals.VOICEFLOW_SESSION },
     data: {
-      action,
+      action, //action: { "type": "text", "payload": "How do I turn on my computer?" },
       config: { stopTypes: ["DTMF"] },
       state: { variables: { calledParty: called, callingParty: caller } }
     },
   };
+
+  
 
   // EXAMPLE OF PAYLOAD: https://developer.voiceflow.com/reference/stateinteract-1
   // {
@@ -116,7 +118,8 @@ async function interact( called, caller, action ) {
 
 
   const response = await axios(request);
-  // logTranscript('Test');
+  console.log(`>>> response = ${JSON.stringify(response)}`);
+  // logTranscript(` >>> response = ${JSON.stringify(response)}`);
 
   // janky first pass
   const endTurn = response.data.some((trace) =>
@@ -169,7 +172,7 @@ async function interact( called, caller, action ) {
         break;
       }
       case "end": {
-        console.log(` *** Entering transcript ***`)
+        console.log(`CASE END: Entering transcript`)
         saveTranscript(caller);
         twiml.hangup();
         break;
@@ -185,7 +188,7 @@ async function interact( called, caller, action ) {
 launch = async (called, caller) => {
 
   console.log(`*** Function executed: launch (called: ${called}, caller: ${caller}) ***`);
-  return interact(called, caller, { type: "launch" });
+  return interacting(called, caller, { type: "launch" });
 };
 
 interaction = async (called, caller, query = "", digit = null) => {
@@ -205,7 +208,7 @@ interaction = async (called, caller, query = "", digit = null) => {
     logTranscript(query);
   }
   //I Should include a console.log within the logtranscript function.
-  return interact( called, caller, action );
+  return interacting(called, caller, action);
 };
 
 async function saveTranscript(username) {
@@ -213,6 +216,10 @@ async function saveTranscript(username) {
     if (!username || username == "" || username == undefined) {
       username = "Anonymous";
     }
+
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+
     axios({
       method: "put",
       url: "https://api.voiceflow.com/v2/transcripts",
@@ -224,7 +231,7 @@ async function saveTranscript(username) {
         os: "Twilio",
         browser: "Twilio",
         user: {
-          name: username,
+          name: `${username} (${timestamp})`,
           image:
             "https://s3.amazonaws.com/com.voiceflow.studio/share/twilio-logo-png-transparent/twilio-logo-png-transparent.png",
         },
@@ -242,7 +249,6 @@ async function saveTranscript(username) {
 }
 
 
-
 const app = express();
 
 app.use(logger("dev"));
@@ -257,16 +263,14 @@ const router = express.Router();
 
 router.use("/ivr", twilio.webhook({ validate: false }));
 
-router.post("/ivr/interaction", async (req, res) => {
-  console.log(`----- Calling /ivr/interaction -----`);
-  const { Called, Caller, SpeechResult, Digits } = req.body;
-  res.send(await interaction(Called, Caller, SpeechResult, Digits));
-});
-
 router.post("/ivr/launch", async (req, res) => {  //<------------------- THIS IS WHERE EVERYTHING BEGINS --------------------|
 
-  console.log(`----- Calling /ivr/launch -----`);
+  // console.log(`----- Calling /ivr/launch -----`);
   const { Called, Caller } = req.body;
+
+  console.log(` ********************************************************
+                *********************** NEW CALL ***********************
+                ********************************************************`);
 
   logTranscript(`Event: ${JSON.stringify(req.body)}`);
   logTranscript(`First time: Called is ${Called} and Caller is ${Caller}`);
@@ -274,6 +278,12 @@ router.post("/ivr/launch", async (req, res) => {  //<------------------- THIS IS
   /*- I could add here (and modify) the globals variables depending on the called party -*/
 
   res.send(await launch(Called, Caller));
+});
+
+router.post("/ivr/interaction", async (req, res) => {
+  console.log(`----- Calling /ivr/interaction -----`);
+  const { Called, Caller, SpeechResult, Digits } = req.body;
+  res.send(await interaction(Called, Caller, SpeechResult, Digits));
 });
 
 app.use(router);
